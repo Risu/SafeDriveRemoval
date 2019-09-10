@@ -1,0 +1,15 @@
+# v1.0
+# contact: piotr4@gmail.com
+# GPLv3
+
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=inode/directory
+Actions=saferemoval
+InitialPreference=0
+
+[Desktop Action saferemoval]
+Name=Safely Remove Drives
+Icon=drive-harddisk
+Exec=bash -c 'ignoreList=("/boot/efi" "/media/vega/MicroSDCard"); mnts=$(lsblk -I 8 --list -n -o MOUNTPOINT); readarray -t hdds <<<"$mnts"; hdd=(); declare -i indeks=0; for i in "${hdds[@]}"; do if [ ${#i} -ge 3 ]; then ignore=false; for nos in "${ignoreList[@]}"; do if [ "$nos" = "$i" ]; then ignore=true; break; fi done; if [ "$ignore" = false ]; then hdd+=("$i"); fi fi; ((indeks++)); done; power_down_hdd () { progressText="Safely removing drive...                                              "; dbusRef=$(kdialog --title="HDD removal" --progressbar "$progressText" 0); DFRaw=$(df -h "$1" | tr " " "\n" | grep "/"); DFArr=($DFRaw); DEVPATH="${DFArr[0]}"; if [ -n "$DEVPATH" ]; then echo "trying unmount $DEVPATH..."; (udisksctl unmount -b "$DEVPATH" && qdbus $dbusRef setLabelText "$progressText" && sleep 3s && qdbus $dbusRef setLabelText "$progressText" && udisksctl power-off -b "$DEVPATH" && qdbus $dbusRef close && kdialog --title="HDD removal" --msgbox "$DEVPATH has been powered down.") || (echo "powering down $DEVPATH has failed" && kdialog --title="HDD removal" --msgbox "Powering down $DEVPATH has failed."); else qdbus $dbusRef close; kdialog --title="Safe HDD disk removal" --sorry "Drive $1 has not been detected.        "; fi }; if [ "${#hdd[*]}" -ge 1 ]; then choice=$(kdialog --title="Safe HDD disk removal" --combobox "Select HDD to be safely removed:                                         " "${hdd[@]}"); if [ "$?" = 0 ]; then power_down_hdd "$choice"; fi; else kdialog --title="Safe HDD disk removal" --msgbox "No HDD drives detected.       "; fi;';
